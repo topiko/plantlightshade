@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 TENSOR_PI = torch.tensor(math.pi)
 ALPHA = 0.1
-NUM_BINS = 100
 SOURCE_H = 0.3
+NUM_BINS = 300
 REFLECTION_BINS = torch.linspace(0, math.pi, NUM_BINS)
 
 
