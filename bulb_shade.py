@@ -28,6 +28,9 @@ class Mirror:
     def __init__(self, num_rays: int, source_h: float, width: float = 1.0):
         num_pieces = num_rays
         self.num_pieces = num_pieces
+
+        # TODO: starting from 0 causes divergence when taking the gradient.
+        # Figure out why this is so.
         self._xs = torch.linspace(width / 1e12, width, num_pieces, requires_grad=False)
         self._ys = torch.zeros(num_pieces, requires_grad=True)
         self.source_h = source_h
