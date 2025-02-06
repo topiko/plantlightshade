@@ -21,12 +21,22 @@ def cast(points_and_angles: np.ndarray, lens: np.ndarray) -> np.ndarray:
     return points + np.vstack([dxs, dys]).T
 
 
-def get_target(num_rays: int) -> torch.tensor:
-    return torch.linspace(TENSOR_PI / 2, TENSOR_PI / 7 * 3, num_rays, dtype=torch.float)
+def get_target(num_rays: int, max_angle_deg: float = 0.0) -> torch.tensor:
+
+    max_angle_rad = max_angle_deg / 180 * TENSOR_PI
+    return torch.linspace(
+        TENSOR_PI / 2, TENSOR_PI / 2 - max_angle_rad, num_rays, dtype=torch.float
+    )
 
 
 class Mirror:
-    def __init__(self, num_rays: int, source_h: float, width: float = 1.0):
+    def __init__(
+        self,
+        num_rays: int,
+        source_h: float,
+        width: float = 1.0,
+        max_angle_deg: float = 0.0,
+    ):
         num_pieces = num_rays
         self.num_pieces = num_pieces
 
@@ -35,6 +45,7 @@ class Mirror:
         self._xs = torch.linspace(width / 1e12, width, num_pieces, requires_grad=False)
         self._ys = torch.zeros(num_pieces, requires_grad=True)
         self.source_h = source_h
+        self.max_angle_deg = max_angle_deg
 
     @property
     def surface(self) -> torch.tensor:
@@ -74,7 +85,10 @@ class Mirror:
         ax = plt.gca().inset_axes([0.0, 0.7, 0.4, 0.3])
         _common = {"bins": REFLECTION_BINS, "histtype": "step"}
         ax.hist(self.reflection_angle_distr().detach().numpy(), **_common)
-        ax.hist(get_target(self.num_pieces), **_common)
+        ax.hist(
+            get_target(self.num_pieces, max_angle_deg=self.max_angle_deg),
+            **_common,
+        )
         ax.set_xlabel("Angle [rad]")
         ax.set_title(
             "Reflection Angle Distribution",
@@ -119,18 +133,29 @@ def main():
         "--light-height", type=float, default=0.25, help="Height of the light source"
     )
     parser.add_argument(
+        "--max-angle-deg",
+        type=float,
+        default=0.0,
+        help="Maximum reflection angle in degrees (min = 0, straight up)",
+    )
+    parser.add_argument(
         "--make-movie", action="store_true", help="Make figs for movie."
     )
 
     args = parser.parse_args()
 
     loss = torch.nn.MSELoss()
-    mirror = Mirror(args.num_rays, source_h=args.light_height, width=args.shade_width)
+    mirror = Mirror(
+        args.num_rays,
+        source_h=args.light_height,
+        width=args.shade_width,
+        max_angle_deg=args.max_angle_deg,
+    )
 
-    target = get_target(args.num_rays)
-    optimizer = torch.optim.Adam([mirror._ys], lr=0.001)
+    target = get_target(args.num_rays, args.max_angle_deg)
+    optimizer = torch.optim.Adam([mirror._ys], lr=0.002)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, factor=0.2, patience=100
+        optimizer, factor=0.2, patience=1000
     )
 
     i = 0
@@ -169,7 +194,7 @@ def main():
     surf = mirror.surface.detach().numpy()
 
     np.savetxt(
-        f"surface_w={args.shade_width}_source_h={args.light_height}.csv",
+        f"surface_w={args.shade_width}_source_h={args.light_height}_max_angle={args.max_angle_deg}.csv",
         surf,
         delimiter=",",
     )
