@@ -16,8 +16,8 @@ def cast(points_and_angles: np.ndarray, lens: np.ndarray) -> np.ndarray:
     points = points_and_angles[:, :2]
     angles = points_and_angles[:, 2]
 
-    dxs = lens * torch.cos(angles)
-    dys = lens * torch.sin(angles)
+    dxs = lens * np.cos(angles)
+    dys = lens * np.sin(angles)
 
     return points + np.vstack([dxs, dys]).T
 
@@ -44,7 +44,7 @@ class Mirror:
     def plot(self):
         surf = self.surface.detach().numpy()
 
-        plt.plot(surf[:, 0], surf[:, 1], marker="o")
+        plt.plot(surf[:, 0], surf[:, 1], marker="o", markersize=2, color="black")
 
         incoming_rays, outgoing_rays = self.reflect()
         incoming_rays = incoming_rays.detach().numpy()
@@ -72,10 +72,21 @@ class Mirror:
                 alpha=ALPHA,
             )
 
-        ax = plt.gca().inset_axes([0.0, 0.8, 0.2, 0.2])
-        ax.hist(self.reflection_angle_distr().detach().numpy(), REFLECTION_BINS)
-        ax.hist(get_target(self.num_pieces), REFLECTION_BINS)
+        ax = plt.gca().inset_axes([0.0, 0.7, 0.4, 0.3])
+        _common = {"bins": REFLECTION_BINS, "histtype": "step"}
+        ax.hist(self.reflection_angle_distr().detach().numpy(), **_common)
+        ax.hist(get_target(self.num_pieces), **_common)
+        ax.set_xlabel("Angle [rad]")
+        ax.set_title(
+            "Reflection Angle Distribution",
+            fontsize="x-small",
+            loc="left",
+            weight="bold",
+        )
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.patch.set_alpha(0.5)
 
+        plt.axis("off")
         plt.axis("equal")
 
     def reflection_angle_distr(self) -> torch.tensor:
@@ -120,9 +131,13 @@ def main():
         loss_ = loss(vals, target)
         if i % 1000 == 0:
             print(f"Loss: {loss_}")
-        if i % 10000 == 0:
+        if i % 10 == 0:
             mirror.plot()
-            plt.show()
+            plt.savefig(f"figs/{i:06d}.png")
+            if i % 1000 == 0:
+                plt.show()
+            plt.clf()
+
         loss_.backward()
         # mirror._ys.grad[0] = 0
 
