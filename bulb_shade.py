@@ -7,7 +7,6 @@ import torch
 
 TENSOR_PI = torch.tensor(math.pi)
 ALPHA = 0.1
-SOURCE_H = 0.25
 NUM_BINS = 300
 REFLECTION_BINS = torch.linspace(0, math.pi, NUM_BINS)
 
@@ -113,11 +112,20 @@ class Mirror:
 def main():
     parser = argparse.ArgumentParser(description="Bulb Shade")
     parser.add_argument("-n", "--num-rays", type=int, default=32, help="Number of rays")
+    parser.add_argument(
+        "--shade-width", type=float, default=1.0, help="Width of the shade"
+    )
+    parser.add_argument(
+        "--light-height", type=float, default=0.25, help="Height of the light source"
+    )
+    parser.add_argument(
+        "--make-movie", action="store_true", help="Make figs for movie."
+    )
 
     args = parser.parse_args()
 
     loss = torch.nn.MSELoss()
-    mirror = Mirror(args.num_rays, source_h=SOURCE_H)
+    mirror = Mirror(args.num_rays, source_h=args.light_height, width=args.shade_width)
 
     target = get_target(args.num_rays)
     optimizer = torch.optim.Adam([mirror._ys], lr=0.001)
@@ -126,26 +134,45 @@ def main():
     )
 
     i = 0
+    best_loss = float("inf")
+    counter = 0
     while True:
         vals = mirror.reflection_angle_distr()
         loss_ = loss(vals, target)
         if i % 1000 == 0:
             print(f"Loss: {loss_}")
-        if i % 10 == 0:
+        if (i % 10 == 0) and args.make_movie:
             mirror.plot()
             plt.savefig(f"figs/{i:06d}.png")
-            if i % 1000 == 0:
-                plt.show()
             plt.clf()
+        if i % 5000 == 0:
+            mirror.plot()
+            plt.show()
 
         loss_.backward()
-        # mirror._ys.grad[0] = 0
+        # Fix the origin of the mirror
+        mirror._ys.grad[0] = 0
 
         optimizer.step()
         optimizer.zero_grad()
         scheduler.step(loss_)
 
+        if loss_.item() < best_loss:
+            best_loss = loss_.item()
+            counter = 0
+
+        if counter > 3e3:
+            break
         i += 1
+        counter += 1
+
+    surf = mirror.surface.detach().numpy()
+
+    np.savetxt(
+        f"surface_w={args.shade_width}_source_h={args.light_height}.csv",
+        surf,
+        delimiter=",",
+    )
 
 
 if __name__ == "__main__":
