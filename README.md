@@ -1,6 +1,6 @@
 ## This amazing project figures out what would be the best shape for lamb light shade!
 
-Use: `uv sync` and `uv run bulb_shade.py --nmu-rays 500` to run the code.
+Use: `uv sync` and `uv run bulb_shade.py --num-rays 500` to run the code.
 
 Make video:
 
