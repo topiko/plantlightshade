@@ -22,7 +22,6 @@ def cast(points_and_angles: np.ndarray, lens: np.ndarray) -> np.ndarray:
 
 
 def get_target(num_rays: int, max_angle_deg: float = 0.0) -> torch.tensor:
-
     max_angle_rad = max_angle_deg / 180 * TENSOR_PI
     return torch.linspace(
         TENSOR_PI / 2, TENSOR_PI / 2 - max_angle_rad, num_rays, dtype=torch.float
@@ -40,16 +39,18 @@ class Mirror:
         num_pieces = num_rays
         self.num_pieces = num_pieces
 
-        # TODO: starting from 0 causes divergence when taking the gradient.
-        # Figure out why this is so.
-        self._xs = torch.linspace(width / 1e12, width, num_pieces, requires_grad=False)
-        self._ys = torch.zeros(num_pieces, requires_grad=True)
+        dx = width / (num_pieces - 1)
+        # In self.surface we fix the origin to (0, 0).
+        self._xs = torch.linspace(dx, width, num_pieces - 1, requires_grad=False)
+        self._ys = torch.zeros(num_pieces - 1, requires_grad=True)
         self.source_h = source_h
         self.max_angle_deg = max_angle_deg
 
     @property
     def surface(self) -> torch.tensor:
-        return torch.vstack([self._xs, self._ys]).T
+        xs = torch.concat((torch.tensor([0]), self._xs))
+        ys = torch.concat((torch.tensor([0]), self._ys))
+        return torch.vstack([xs, ys]).T
 
     def plot(self):
         surf = self.surface.detach().numpy()
@@ -175,8 +176,6 @@ def main():
             plt.show()
 
         loss_.backward()
-        # Fix the origin of the mirror
-        # mirror._ys.grad[1] = 0
 
         optimizer.step()
         optimizer.zero_grad()
