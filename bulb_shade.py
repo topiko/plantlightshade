@@ -153,9 +153,9 @@ def main():
     )
 
     target = get_target(args.num_rays, args.max_angle_deg)
-    optimizer = torch.optim.Adam([mirror._ys], lr=0.002)
+    optimizer = torch.optim.Adam([mirror._ys], lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, factor=0.2, patience=1000
+        optimizer, factor=0.2, patience=100
     )
 
     i = 0
@@ -176,7 +176,7 @@ def main():
 
         loss_.backward()
         # Fix the origin of the mirror
-        mirror._ys.grad[0] = 0
+        # mirror._ys.grad[1] = 0
 
         optimizer.step()
         optimizer.zero_grad()
