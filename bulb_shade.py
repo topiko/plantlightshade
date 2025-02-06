@@ -1,27 +1,29 @@
 import argparse
-import torch
 import math
+
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 TENSOR_PI = torch.tensor(math.pi)
 ALPHA = 0.1
-SOURCE_H = 0.3
+SOURCE_H = 0.25
 NUM_BINS = 300
 REFLECTION_BINS = torch.linspace(0, math.pi, NUM_BINS)
 
 
-def cast(points_and_angles: torch.tensor, lens: torch.tensor) -> torch.tensor:
+def cast(points_and_angles: np.ndarray, lens: np.ndarray) -> np.ndarray:
     points = points_and_angles[:, :2]
     angles = points_and_angles[:, 2]
 
     dxs = lens * torch.cos(angles)
     dys = lens * torch.sin(angles)
 
-    return points + torch.vstack([dxs, dys]).T
+    return points + np.vstack([dxs, dys]).T
 
 
 def get_target(num_rays: int) -> torch.tensor:
-    return torch.linspace(TENSOR_PI / 2, TENSOR_PI / 3, num_rays, dtype=torch.float)
+    return torch.linspace(TENSOR_PI / 2, TENSOR_PI / 7 * 3, num_rays, dtype=torch.float)
 
 
 class Mirror:
@@ -39,40 +41,40 @@ class Mirror:
     def surface(self) -> torch.tensor:
         return torch.vstack([self._xs, self._ys]).T
 
-    def plot(self, source: bool = True):
+    def plot(self):
         surf = self.surface.detach().numpy()
 
         plt.plot(surf[:, 0], surf[:, 1], marker="o")
 
-        if source:
-            incoming_rays, outgoing_rays = self.reflect()
-            incoming_lens = (
-                incoming_rays[:, 0] ** 2 + (self.source_h - incoming_rays[:, 1]) ** 2
-            ) ** 0.5
+        incoming_rays, outgoing_rays = self.reflect()
+        incoming_rays = incoming_rays.detach().numpy()
+        outgoing_rays = outgoing_rays.detach().numpy()
 
-            incoming_endpoints = cast(incoming_rays, incoming_lens).detach().numpy()
-            outgoing_endpoints = cast(outgoing_rays, incoming_lens).detach().numpy()
-            incoming_rays = incoming_rays.detach().numpy()
-            outgoing_rays = outgoing_rays.detach().numpy()
+        incoming_lens = (
+            incoming_rays[:, 0] ** 2 + (self.source_h - incoming_rays[:, 1]) ** 2
+        ) ** 0.5
 
-            for i in range(incoming_rays.shape[0]):
-                plt.plot(
-                    [incoming_rays[i, 0], incoming_endpoints[i, 0]],
-                    [incoming_rays[i, 1], incoming_endpoints[i, 1]],
-                    color="blue",
-                    alpha=ALPHA,
-                )
+        incoming_endpoints = cast(incoming_rays, incoming_lens)
+        outgoing_endpoints = cast(outgoing_rays, incoming_lens)
 
-                plt.plot(
-                    [outgoing_rays[i, 0], outgoing_endpoints[i, 0]],
-                    [outgoing_rays[i, 1], outgoing_endpoints[i, 1]],
-                    color="red",
-                    alpha=ALPHA,
-                )
+        for i in range(incoming_rays.shape[0]):
+            plt.plot(
+                [incoming_rays[i, 0], incoming_endpoints[i, 0]],
+                [incoming_rays[i, 1], incoming_endpoints[i, 1]],
+                color="blue",
+                alpha=ALPHA,
+            )
 
-            ax = plt.gca().inset_axes([0.0, 0.8, 0.2, 0.2])
-            ax.hist(self.reflection_angle_distr().detach().numpy(), REFLECTION_BINS)
-            ax.hist(get_target(self.num_pieces), REFLECTION_BINS)
+            plt.plot(
+                [outgoing_rays[i, 0], outgoing_endpoints[i, 0]],
+                [outgoing_rays[i, 1], outgoing_endpoints[i, 1]],
+                color="red",
+                alpha=ALPHA,
+            )
+
+        ax = plt.gca().inset_axes([0.0, 0.8, 0.2, 0.2])
+        ax.hist(self.reflection_angle_distr().detach().numpy(), REFLECTION_BINS)
+        ax.hist(get_target(self.num_pieces), REFLECTION_BINS)
 
         plt.axis("equal")
 
@@ -114,7 +116,6 @@ def main():
 
     i = 0
     while True:
-
         vals = mirror.reflection_angle_distr()
         loss_ = loss(vals, target)
         if i % 1000 == 0:
