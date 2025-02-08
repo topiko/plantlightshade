@@ -29,15 +29,30 @@ def loss(
 ) -> dict[str, torch.tensor]:
     mse = ((outgoing_rays - target_rays) ** 2).mean()
 
-    # we want all pieces to have same projected length:
     # projections = get_projections(mirror, torch.tensor([0, source_h]))
+
+    # we want all pieces to have same projected length:
     piece_lens = torch.diff(mirror, dim=0).norm(dim=1)
     piece_len_loss = ((piece_lens - 0.1) ** 2).sum()
 
     # width loss
     w_loss = (mirror[-1, 0] - width) ** 2
 
-    return {"mse": mse, "piece_lens": piece_len_loss, "w_loss": w_loss}
+    # Angles
+    vecs = vecs_to_point(mirror[1:], torch.tensor([0, source_h]))
+    max_angle = TENSOR_PI / 4 * 3
+    N = len(outgoing_rays)
+    target_angles = torch.linspace(max_angle / N, max_angle, N) - TENSOR_PI / 2
+    angles = torch.atan(vecs[:, 1] / vecs[:, 0])
+
+    source_distr_loss = ((angles - target_angles) ** 2).sum()
+
+    return {
+        "mse": mse,
+        "piece_lens": piece_len_loss,
+        "w_loss": w_loss,
+        "source_distr_loss": source_distr_loss,
+    }
 
 
 class Mirror:
@@ -194,8 +209,9 @@ def main():
 
     loss_weights = {
         "mse": 1.0,
-        "piece_lens": 1.0,
+        "piece_lens": 0.0,
         "w_loss": 0.0,
+        "source_distr_loss": 1.0,
     }
     i = 0
     best_loss = float("inf")
@@ -216,19 +232,21 @@ def main():
             for k, v in loss_.items():
                 print(f"{k:>20}: {v.item():.3e}")
 
-            from utils import get_projections
-
-            projs = get_projections(mirror.surface, torch.tensor([0, args.light_height]))
-            norms = projs.norm(dim=1)
-            plt.hist(norms.detach().numpy())
-            plt.show()
-
         if (i % 10 == 0) and args.make_movie:
             mirror.plot()
             plt.savefig(f"figs/{i:06d}.png")
             plt.clf()
         if args.monitor and (i % 1000 == 0):
             mirror.plot()
+            plt.show()
+
+            from utils import get_projections
+
+            projs = get_projections(
+                mirror.surface, torch.tensor([0, args.light_height])
+            )
+            norms = projs.norm(dim=1)
+            plt.hist(norms.detach().numpy())
             plt.show()
 
         # torch.nn.utils.clip_grad_norm_(params, max_norm=1e-9)
