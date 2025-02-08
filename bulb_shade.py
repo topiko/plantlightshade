@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from utils import cast, get_projections, vecs_to_point
+from utils import cast, vecs_to_point
 
 TENSOR_PI = torch.tensor(math.pi)
 ALPHA = 0.1
@@ -29,10 +29,10 @@ def loss(
 ) -> dict[str, torch.tensor]:
     mse = ((outgoing_rays - target_rays) ** 2).mean()
 
-
     # we want all pieces to have same projected length:
     # projections = get_projections(mirror, torch.tensor([0, source_h]))
-    piece_len_loss = ((mirror.norm(dim=1) - 0.1)**2).sum()
+    piece_lens = torch.diff(mirror, dim=0).norm(dim=1)
+    piece_len_loss = ((piece_lens - 0.1) ** 2).sum()
 
     # width loss
     w_loss = (mirror[-1, 0] - width) ** 2
@@ -187,14 +187,14 @@ def main():
 
     params = mirror.params
     target = get_target(args.num_rays, args.max_angle_deg)
-    optimizer = torch.optim.Adam(params, lr=0.000001)
+    optimizer = torch.optim.Adam(params, lr=0.0001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, factor=0.9, patience=1e3
     )
 
     loss_weights = {
         "mse": 1.0,
-        "piece_lens": 10.0,
+        "piece_lens": 1.0,
         "w_loss": 0.0,
     }
     i = 0
@@ -215,6 +215,14 @@ def main():
             print(f"Loss={loss_sum.item():.3e}")
             for k, v in loss_.items():
                 print(f"{k:>20}: {v.item():.3e}")
+
+            from utils import get_projections
+
+            projs = get_projections(mirror.surface, torch.tensor([0, args.light_height]))
+            norms = projs.norm(dim=1)
+            plt.hist(norms.detach().numpy())
+            plt.show()
+
         if (i % 10 == 0) and args.make_movie:
             mirror.plot()
             plt.savefig(f"figs/{i:06d}.png")

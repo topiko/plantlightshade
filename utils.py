@@ -30,7 +30,7 @@ def get_projections(curve: torch.tensor, source_point: torch.tensor) -> torch.te
     """
     curve_pieces = curve[:-1] - curve[1:]
 
-    to_source = vecs_to_point(curve, source_point)[:-1]
+    to_source = vecs_to_point(curve, source_point)[1:]
     normals = get_normals(to_source)
 
     projections = curve_pieces @ normals.T
