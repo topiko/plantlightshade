@@ -28,11 +28,11 @@ def get_projections(curve: torch.tensor, source_point: torch.tensor) -> torch.te
     where the projection direction is defined by the normal
     from the point on the curve to the source point.
     """
-    curve_pieces = curve[:-1] - curve[1:]
+    curve_pieces = curve[1:] - curve[:-1]
 
     to_source = vecs_to_point(curve, source_point)[1:]
     normals = get_normals(to_source)
 
-    projections = curve_pieces @ normals.T
+    projections = (curve_pieces @ normals.T).diag()
 
     return projections
