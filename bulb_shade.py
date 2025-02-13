@@ -245,9 +245,12 @@ def main():
         loss_sum = sum(loss_.values())
         loss_sum.backward()
         if i % 100 == 0:
-            print(f"Loss={loss_sum.item():.3e}")
+            print("Loss:".rjust(21))
             for k, v in loss_.items():
                 print(f"{k:>20}: {v.item():.3e}")
+
+            print("sum:".rjust(21) + f" {loss_sum.item():.3e}")
+            print()
 
         if (i % 10 == 0) and args.make_movie:
             mirror.plot()
