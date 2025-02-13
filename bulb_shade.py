@@ -138,7 +138,7 @@ class Mirror:
             * 180,
             **_common,
         )
-        ax_ra.set_xlabel("Angle (from x-axis) [deg]")
+        ax_ra.set_xlabel("Angle (from x-axis) [deg]", fontsize="x-small")
         ax_ra.set_title(
             "Reflection Angle Distr. (target = orange)",
             fontsize="x-small",
@@ -152,7 +152,7 @@ class Mirror:
         ax_sa = ax.inset_axes([inset_W, H, inset_W, inset_H])
         angles = incoming_rays[:, 2] / math.pi * 180 - 90
         ax_sa.hist(angles, alpha=0.5, bins=NUM_BINS)
-        ax_sa.set_xlabel("Angle (from -z-axis) [deg]")
+        ax_sa.set_xlabel("Angle (from -y-axis) [deg]", fontsize="x-small")
         ax_sa.set_title(
             "Source Angle Distr. (target = uniform)",
             fontsize="x-small",
