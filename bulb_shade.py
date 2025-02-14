@@ -2,7 +2,6 @@ import argparse
 import math
 
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 
 from utils import cast, vecs_to_point
@@ -252,6 +251,12 @@ def main():
             print("sum:".rjust(21) + f" {loss_sum.item():.3e}")
             print()
 
+            print("Max width:".rjust(21), f"{mirror.surface[-1, 0].item():.2f}")
+            print("Max height:".rjust(21), f"{mirror.surface[-1, 1].item():.2f}")
+            print("Source height:".rjust(21), f"{args.light_height:.2f}")
+
+            print()
+
         if (i % 10 == 0) and args.make_movie:
             mirror.plot()
             plt.savefig(f"figs/{i:06d}.png")
@@ -278,11 +283,11 @@ def main():
 
     surf = mirror.surface.detach().numpy()
 
-    np.savetxt(
-        f"surface_source_h={args.light_height}_max_ref_angle={args.max_reflection_angle_deg}.csv",
-        surf,
-        delimiter=",",
-    )
+    with open("mirrors/surface.txt", "w", encoding="utf-8") as f:
+        f.write("surf = [\n")
+        for point in surf:
+            f.write(f"\t[ {point[0]:.6f}, {point[1]:.6f} ],\n")
+        f.write("];")
 
 
 if __name__ == "__main__":
