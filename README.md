@@ -1,4 +1,4 @@
-## This amazing project figures out what would be the best shape for lamb light shade!
+## This amazing project figures out what would be the best shape for light bulb shade if light intensity distribution is given!
 
 Use: `uv sync` to install depencies. Then:
 
