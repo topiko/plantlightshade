@@ -1,6 +1,6 @@
 include <../mirrors/surface.txt>;
-$fa=1; $fs = .02;
-t = 0.3;
+$fa=1; $fs = .5;
+t = 3;
 
 module shade2d() {
 
@@ -21,7 +21,7 @@ module mirror3d() {
 
 difference() {
     mirror3d();
-    cylinder(h=200, d=4, center =true);
+    cylinder(h=200, d=33, center =true);
 }
 
 

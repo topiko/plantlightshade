@@ -37,7 +37,6 @@ def loss(
     source_h: float,
     max_shade_angle_deg: float,
 ) -> dict[str, torch.tensor]:
-
     # Reflected
     mse = ((outgoing_rays - target_rays) ** 2).mean()
 
@@ -78,7 +77,6 @@ class Mirror:
 
     @property
     def surface(self) -> torch.tensor:
-
         dys = self._lengths * torch.sin(self._angles)
         dxs = self._lengths * torch.cos(self._angles)
 
@@ -251,7 +249,7 @@ def main():
             print("sum:".rjust(21) + f" {loss_sum.item():.3e}")
             print()
 
-            print("Max width:".rjust(21), f"{mirror.surface[-1, 0].item():.2f}")
+            print("Max width:".rjust(21), f"{mirror.surface[-1, 0].item() * 2:.2f}")
             print("Max height:".rjust(21), f"{mirror.surface[-1, 1].item():.2f}")
             print("Source height:".rjust(21), f"{args.light_height:.2f}")
 
@@ -271,9 +269,12 @@ def main():
 
         if loss_sum.item() < best_loss:
             best_loss = loss_sum.item()
+            if counter > 10:
+                print(f"Counts {counter}:")
+                print(f"New best loss: {best_loss:.3e}")
             counter = 0
 
-        if counter > 5e3:
+        if counter > 1e3:
             break
         i += 1
         counter += 1
